@@ -69,19 +69,6 @@ Click `MY ACCOUNT` to manage your personal account details such as name, gender,
 
 Click `SETTINGS` to access the settings menu, where you can customize the app's appearance, including theme color and night mode.
 
-## Project Structure
-
-- `MainActivity`: The main entry point of the application, displaying the navigation menu.
-- `MapFragment`: Fragment for recording and displaying the running route on a map.
-- `WeatherActivity`: Activity for displaying current weather information.
-- `GalleryActivity`: Activity for displaying photos taken during running activities.
-- `HistoryActivity`: Activity for viewing the history of running activities.
-- `MyAccountActivity`: Activity for managing personal account information.
-- `SettingsActivity`: Activity for adjusting application settings.
-- `StatisticsActivity`: Activity for displaying running statistics.
-- `services`: Contains `TimerService` and `TrackerService` for tracking time and location.
-- `database`: Contains the database structure and data access objects.
-- `converters`: Contains type converters for storing custom data types in the database.
 
 ## License
 
