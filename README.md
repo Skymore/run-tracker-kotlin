@@ -2,6 +2,9 @@
 
 RunTracker is an Android application developed in Kotlin for tracking running activities. The app records the running route, steps, calories burned, and provides additional features such as weather information, photo gallery, and history of running activities.
 
+## Demo Video
+https://www.youtube.com/watch?v=IA1gVsiLBIU
+
 ## Figma
 <img width="817" alt="image" src="https://github.com/Skymore/run-tracker-kotlin/assets/11980286/b0c4a128-8fd6-4e6b-bdb4-df76576a7d7e">
 
