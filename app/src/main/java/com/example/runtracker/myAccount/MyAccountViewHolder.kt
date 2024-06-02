@@ -13,26 +13,30 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.pow
 
+/**
+ * ViewHolder for displaying and managing user account information in a RecyclerView.
+ * @param view The view of the item.
+ * @param onBlockClickListener Listener for block click events.
+ */
+class MyAccountViewHolder(
+    var view: View,
+    private var onBlockClickListener: MyAccountAdapter.OnMyAccountClickListener
+) : RecyclerView.ViewHolder(view), View.OnClickListener {
 
-class MyAccountViewHolder(var view : View, private var onBlockClickListener: MyAccountAdapter.OnMyAccountClickListener) :  RecyclerView.ViewHolder(view), View.OnClickListener {
-    private var sharedPreferences: SharedPreferences
-    private var editor: SharedPreferences.Editor
-    private val spinnerData = listOf("F", "M")
-    private var spinner: Spinner
-    private val inputText = EditText(view.context)
+    private var sharedPreferences: SharedPreferences = view.context.getSharedPreferences("my_account", Context.MODE_PRIVATE)
+    private var editor: SharedPreferences.Editor = sharedPreferences.edit()
+    private val spinnerData = listOf("F", "M") // Data for the gender spinner
+    private var spinner: Spinner // Spinner for selecting gender
+    private val inputText = EditText(view.context) // EditText for entering text
 
-    var textViewTitle: TextView = view.findViewById(R.id.textViewTitle)
-    var textViewData: TextView = view.findViewById(R.id.textViewData)
+    var textViewTitle: TextView = view.findViewById(R.id.textViewTitle) // TextView for displaying the title
+    var textViewData: TextView = view.findViewById(R.id.textViewData) // TextView for displaying the data
 
-    private val spinnerAdapter =
-        ArrayAdapter(view.context, android.R.layout.simple_spinner_item, spinnerData)
+    private val spinnerAdapter = ArrayAdapter(view.context, android.R.layout.simple_spinner_item, spinnerData)
 
     init {
         itemView.setOnClickListener(this)
         inputText.gravity = Gravity.CENTER
-
-        sharedPreferences = view.context.getSharedPreferences("my_account", Context.MODE_PRIVATE)
-        editor = sharedPreferences.edit()
 
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
@@ -45,86 +49,41 @@ class MyAccountViewHolder(var view : View, private var onBlockClickListener: MyA
         }
     }
 
+    /**
+     * Handles click events on the item view.
+     * @param v The view that was clicked.
+     */
     override fun onClick(v: View?) {
-        if (adapterPosition == 0) {
-            val alertText = createInputAlert("Name", "Enter your name")
-            alertText.show()
+        when (adapterPosition) {
+            0 -> createInputAlert("Name", "Enter your name").show()
+            1 -> createInputAlert("Surname", "Enter your surname").show()
+            2 -> createGenderAlert().show()
+            3 -> createDateAlert().show()
+            4 -> createInputAlert("Weight", "Enter your weight").show()
+            5 -> createInputAlert("Height", "Enter your height").show()
         }
-        if (adapterPosition == 1) {
-            val alertText = createInputAlert("Surname", "Enter your surname")
-            alertText.show()
-        }
-        if (adapterPosition == 2) {
-            val spinnerData = listOf("F", "M")
-            val spinner = Spinner(view.context).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                adapter =
-                    ArrayAdapter(view.context, android.R.layout.simple_spinner_item, spinnerData)
-            }
-            val alertDialog = AlertDialog.Builder(view.context).apply {
-                setTitle("Select option")
-                setView(spinner)
-                setPositiveButton("OK") { dialog, which ->
-                    val selectedOption = spinner.selectedItem as String
-                    editor.putString("Sex", selectedOption)
-                    editor.apply()
-                    onBlockClickListener.onBlockClick(adapterPosition)
-                }
-                setNegativeButton("Cancel", null)
-            }.create()
-            alertDialog.show()
-        }
-        if (adapterPosition == 3) {
-            val calendarView = CalendarView(view.context)
-            val alertDialog = AlertDialog.Builder(view.context)
-                .setView(calendarView)
-                .setPositiveButton("OK") { dialog, which ->
-                    val selectedDate = Date(calendarView.date)
-                    val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
-                    val formattedDate = dateFormat.format(selectedDate)
-                    editor.putString("Date of birth", formattedDate)
-                    editor.apply()
-                    onBlockClickListener.onBlockClick(adapterPosition)
-                }
-                .setNegativeButton("Cancel", null)
-                .create()
-            alertDialog.show()
-        }
-
-        if (adapterPosition == 4) {
-            val alertText = createInputAlert("Weight", "Enter your weight")
-            alertText.show()
-        }
-
-        if (adapterPosition == 5) {
-            val alertText = createInputAlert("Height", "Enter your height")
-            alertText.show()
-        }
-
-
-
-
     }
 
+    /**
+     * Creates an alert dialog for entering text input.
+     * @param input The type of input (e.g., Name, Surname).
+     * @param title The title of the dialog.
+     * @return The created AlertDialog.
+     */
     private fun createInputAlert(input: String, title: String): AlertDialog {
         val parent = inputText.parent as? ViewGroup
         parent?.removeView(inputText)
 
-        val alertText = AlertDialog.Builder(view.context)
+        return AlertDialog.Builder(view.context)
             .setTitle(title)
             .setView(inputText)
-            .setPositiveButton("OK") { dialog, which ->
-
+            .setPositiveButton("OK") { dialog, _ ->
                 val text = inputText.text.toString()
-                if(input=="Name" || input=="Surname"){
+                if (input == "Name" || input == "Surname") {
                     editor.putString(input, text)
                     editor.apply()
                     onBlockClickListener.onBlockClick(adapterPosition)
-                }
-                else if(text.toDoubleOrNull() != null) {
+                } else if (text.toDoubleOrNull() != null) {
                     editor.putString(input, text)
                     editor.apply()
                     calculateBMI()
@@ -132,17 +91,67 @@ class MyAccountViewHolder(var view : View, private var onBlockClickListener: MyA
                     Toast.makeText(view.context, "Enter valid data!", Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Cancel") { dialog, which -> }
+            .setNegativeButton("Cancel", null)
             .create()
-
-        return alertText
     }
 
-    fun calculateBMI(){
-        if(sharedPreferences.getString("Height","")!="" && sharedPreferences.getString("Weight","")!=""){
-            val height = sharedPreferences.getString("Height","")?.toFloat()?.div(100.0)
-            val weight = sharedPreferences.getString("Weight","")?.toFloat()
-            editor.putString("BMI", String.format("%.2f", weight!! / height!!.toDouble().pow(2.0)))
+    /**
+     * Creates an alert dialog for selecting gender.
+     * @return The created AlertDialog.
+     */
+    private fun createGenderAlert(): AlertDialog {
+        val spinner = Spinner(view.context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            adapter = ArrayAdapter(view.context, android.R.layout.simple_spinner_item, spinnerData)
+        }
+
+        return AlertDialog.Builder(view.context)
+            .setTitle("Select option")
+            .setView(spinner)
+            .setPositiveButton("OK") { dialog, _ ->
+                val selectedOption = spinner.selectedItem as String
+                editor.putString("Sex", selectedOption)
+                editor.apply()
+                onBlockClickListener.onBlockClick(adapterPosition)
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+    }
+
+    /**
+     * Creates an alert dialog for selecting date of birth.
+     * @return The created AlertDialog.
+     */
+    private fun createDateAlert(): AlertDialog {
+        val calendarView = CalendarView(view.context)
+        return AlertDialog.Builder(view.context)
+            .setView(calendarView)
+            .setPositiveButton("OK") { dialog, _ ->
+                val selectedDate = Date(calendarView.date)
+                val dateFormat = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+                val formattedDate = dateFormat.format(selectedDate)
+                editor.putString("Date of birth", formattedDate)
+                editor.apply()
+                onBlockClickListener.onBlockClick(adapterPosition)
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+    }
+
+    /**
+     * Calculates the BMI based on the stored height and weight, and updates the BMI value.
+     */
+    fun calculateBMI() {
+        val heightString = sharedPreferences.getString("Height", "")
+        val weightString = sharedPreferences.getString("Weight", "")
+        if (!heightString.isNullOrEmpty() && !weightString.isNullOrEmpty()) {
+            val height = heightString.toFloat() / 100.0
+            val weight = weightString.toFloat()
+            val bmi = weight / height.pow(2.0)
+            editor.putString("BMI", String.format("%.2f", bmi))
             editor.apply()
             onBlockClickListener.onBlockClick(6)
         }

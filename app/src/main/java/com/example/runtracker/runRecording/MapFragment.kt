@@ -5,6 +5,10 @@ import android.content.*
 import android.content.res.ColorStateList
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.view.LayoutInflater
@@ -36,14 +40,16 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.ItemizedIconOverlay
-import org.osmdroid.views.overlay.ItemizedIconOverlay.OnItemGestureListener
 import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.time.LocalDateTime
 
-class MapFragment : Fragment() {
+/**
+ * Fragment for displaying and recording a running activity on a map.
+ */
+class MapFragment : Fragment(), SensorEventListener {
     companion object {
         const val ACTIVITY_STARTED = "activityStarted"
         const val ACTIVITY_PAUSED = "activityPaused"
@@ -58,7 +64,6 @@ class MapFragment : Fragment() {
 
     private lateinit var sharedPreferences: SharedPreferences
 
-
     private lateinit var addPhotoButton: FloatingActionButton
     private lateinit var startButton: ImageButton
     private lateinit var stopButton: ImageButton
@@ -66,6 +71,8 @@ class MapFragment : Fragment() {
     private lateinit var timeTextView: TextView
     private lateinit var distanceTextView: TextView
     private lateinit var paceTextView: TextView
+    private lateinit var stepsTextView: TextView
+    private lateinit var caloriesTextView: TextView
 
     private lateinit var serviceIntent: Intent
     private var time = 0.0
@@ -73,6 +80,7 @@ class MapFragment : Fragment() {
     private lateinit var trackerIntent: Intent
     private var distance: Float = 0f
     private var pace: Float = 0f
+    private var calories: Float = 0f
 
     private lateinit var mapController: IMapController
     private lateinit var myGpsMyLocationProvider: GpsMyLocationProvider
@@ -82,6 +90,14 @@ class MapFragment : Fragment() {
     private val pins: ArrayList<OverlayItem> = ArrayList()
     var currentRunID: Int = 0
 
+    private lateinit var sensorManager: SensorManager
+    private var stepSensor: Sensor? = null
+    private var stepsSinceReboot: Float = 0f
+    private var initialStepCount: Float = -1f
+
+    /**
+     * Called to initialize the fragment's UI.
+     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -90,43 +106,40 @@ class MapFragment : Fragment() {
         // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_map, container, false)
 
-        // text view setup
-        timeTextView = view.findViewById(R.id.timeTextView) as TextView
+        // Initialize text views
+        timeTextView = view.findViewById(R.id.timeValueTextView) as TextView
         distanceTextView = view.findViewById(R.id.distanceTextView) as TextView
         paceTextView = view.findViewById(R.id.paceTextView) as TextView
+        stepsTextView = view.findViewById(R.id.stepsTextView) as TextView
+        caloriesTextView = view.findViewById(R.id.caloriesTextView) as TextView
 
-        // button setup
+        // Initialize buttons
         addPhotoButton = view.findViewById(R.id.addPhotoFAB) as FloatingActionButton
         startButton = view.findViewById(R.id.startButton) as ImageButton
-        startButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#68A620"))
+        stopButton = view.findViewById(R.id.stopButton) as ImageButton
 
         startButton.setOnClickListener {
             if (activityStatus != ACTIVITY_STARTED) {
                 startActivity()
                 startButton.setImageResource(R.drawable.pause_button_image)
-                startButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FFE338"))
-            } else { //ACTIVITY_STARTED
+            } else {
                 pauseActivity()
                 startButton.setImageResource(R.drawable.play_button_image)
-                startButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#68A620"))
             }
         }
 
-        stopButton = view.findViewById(R.id.stopButton) as ImageButton
         stopButton.setOnClickListener {
-            if(activityStatus != ACTIVITY_STOPPED) {
+            if (activityStatus != ACTIVITY_STOPPED) {
                 stopActivity()
                 startButton.setImageResource(R.drawable.play_button_image)
-                startButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#68A620"))
             }
         }
 
-        // map setup
+        // Initialize map
         mapView = view.findViewById(R.id.mapView) as MapView
 
         val context = requireActivity().applicationContext
-        Configuration.getInstance()
-            .load(context, PreferenceManager.getDefaultSharedPreferences(context))
+        Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context))
         Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
 
         mapView.setUseDataConnection(true)
@@ -136,11 +149,10 @@ class MapFragment : Fragment() {
         mapController = mapView.controller
         mapController.zoomTo(18, 1)
 
-        val defaultLocation =
-            GeoPoint(51.1077, 17.0625) // Wrocław University of Science and Technlogy
+        val defaultLocation = GeoPoint(47.655548, -122.303200) // University of Washington
         mapController.animateTo(defaultLocation)
 
-        // set current location
+        // Set current location
         myGpsMyLocationProvider = GpsMyLocationProvider(activity)
         myLocationOverlay = MyLocationNewOverlay(myGpsMyLocationProvider, mapView)
         myLocationOverlay.enableMyLocation()
@@ -161,33 +173,66 @@ class MapFragment : Fragment() {
             }
         }
 
-
         addPhotoButton.setOnClickListener {
             if (activityStatus == ACTIVITY_STARTED) {
                 addPhoto()
             }
         }
 
-        // timer service setup
+        // Initialize sensor manager and step sensor
+        sensorManager = requireActivity().getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+
+        if (stepSensor == null) {
+            Toast.makeText(requireContext(), "No step sensor detected on this device", Toast.LENGTH_SHORT).show()
+        }
+
+        // Initialize timer service
         serviceIntent = Intent(requireContext(), TimerService::class.java)
         requireActivity().registerReceiver(updateTime, IntentFilter(TimerService.TIMER_UPDATED))
 
-        // tracker service setup
+        // Initialize tracker service
         trackerIntent = Intent(requireContext(), TrackerService::class.java)
-        requireActivity().registerReceiver(
-            updateTrack,
-            IntentFilter(TrackerService.TRACKER_UPDATED)
-        )
+        requireActivity().registerReceiver(updateTrack, IntentFilter(TrackerService.TRACKER_UPDATED))
 
-
+        // Observe max run ID from ViewModel
         runViewModel.maxRunID.observe(viewLifecycleOwner) { maxRunID ->
             currentRunID = (maxRunID ?: 0) + 1
-
         }
 
         return view
     }
 
+    override fun onResume() {
+        super.onResume()
+        stepSensor?.also { sensor ->
+            sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(this)
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_STEP_COUNTER) {
+            if (initialStepCount == -1f) {
+                initialStepCount = event.values[0]
+            }
+
+            stepsSinceReboot = event.values[0] - initialStepCount
+            stepsTextView.text = "Steps: ${stepsSinceReboot.toInt()}"
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        // No-op
+    }
+
+    /**
+     * Creates a pin at the current location on the map.
+     */
     private fun createPin() {
         val currentPinLocation = LocationHelper.getLastKnownLocation(myLocationOverlay)
         val point = GeoPoint(currentPinLocation.latitude, currentPinLocation.longitude)
@@ -195,15 +240,14 @@ class MapFragment : Fragment() {
         pins.add(overlayItem)
         val overlay = ItemizedIconOverlay(
             pins,
-            object : OnItemGestureListener<OverlayItem> {
+            object : ItemizedIconOverlay.OnItemGestureListener<OverlayItem> {
                 override fun onItemSingleTapUp(index: Int, item: OverlayItem): Boolean {
                     val intent = Intent(requireContext(), ImageDetailsActivity::class.java)
                     intent.putExtra("latitude", item.point.latitude)
                     intent.putExtra("longitude", item.point.longitude)
-                    if(activityStatus == ACTIVITY_STOPPED) {
-                        intent.putExtra("runID",currentRunID-1)
-                    }
-                    else {
+                    if (activityStatus == ACTIVITY_STOPPED) {
+                        intent.putExtra("runID", currentRunID - 1)
+                    } else {
                         intent.putExtra("runID", currentRunID)
                     }
                     startActivity(intent)
@@ -219,6 +263,11 @@ class MapFragment : Fragment() {
         mapView.overlays.add(overlay)
     }
 
+    /**
+     * Adds a GeoPoint to the database.
+     * @param geoPoint The GeoPoint to add.
+     * @param path The path of the image associated with the GeoPoint.
+     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun addGeoPointToDataBase(geoPoint: GeoPoint, path: String) {
         val geoPointData = Pin(0, geoPoint, path, currentRunID)
@@ -227,13 +276,12 @@ class MapFragment : Fragment() {
         }
     }
 
-
     private val updateTime: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             time = intent.getDoubleExtra(TimerService.TIME_EXTRA, 0.0)
             timeTextView.text = StringFormatter.getInstance().formatTime(time)
 
-            // update pace
+            // Update pace
             if (time != 0.0 && distance > 0) {
                 val timeInMinutes = time / 60.0
                 val distanceInKm = distance / 1000f
@@ -246,23 +294,26 @@ class MapFragment : Fragment() {
     private val updateTrack: BroadcastReceiver = object : BroadcastReceiver() {
         @SuppressLint("UseCompatLoadingForDrawables")
         override fun onReceive(context: Context, intent: Intent) {
-            // read current location
+            // Read current location
             val latitude = intent.getDoubleExtra(TrackerService.LAT_EXTRA, 0.0)
             val longitude = intent.getDoubleExtra(TrackerService.LON_EXTRA, 0.0)
             val location = GeoPoint(latitude, longitude)
             points.add(location)
 
-            // update distance
+            // Update distance
             if (activityStatus == ACTIVITY_STARTED) {
-                distance = intent.getFloatExtra(TrackerService.DIST_EXTRA, 0f) // distance in meters
+                distance = intent.getFloatExtra(TrackerService.DIST_EXTRA, 0f) // Distance in meters
+                // Calculate calories
+                val weight = sharedPreferences.getString("Weight", "0")?.toFloat() ?: 0f
+                calories = weight * distance / 1000
             }
 
             if (distance != 0f) {
-                distanceTextView.text =
-                    StringFormatter.getInstance().formatDistance(distance / 1000f)
+                distanceTextView.text = StringFormatter.getInstance().formatDistance(distance / 1000f)
+                caloriesTextView.text = "Calories: ${calories.toInt()} kcal"
             }
 
-            // draw track
+            // Draw track
             val pointsArrayList = ArrayList<GeoPoint>(points)
             val polylineTrack = Polyline()
             polylineTrack.setPoints(pointsArrayList)
@@ -271,13 +322,16 @@ class MapFragment : Fragment() {
         }
     }
 
+    /**
+     * Starts the running activity.
+     */
     private fun startActivity() {
         Toast.makeText(requireContext(), "Running started!", Toast.LENGTH_SHORT).show()
 
-        // change status
+        // Change status
         activityStatus = ACTIVITY_STARTED
 
-        // get current location
+        // Get current location
         currentLocation = LocationHelper.getLastKnownLocation(myLocationOverlay)
         points.add(currentLocation)
 
@@ -298,10 +352,13 @@ class MapFragment : Fragment() {
         requireActivity().startService(serviceIntent)
     }
 
+    /**
+     * Pauses the running activity.
+     */
     private fun pauseActivity() {
         Toast.makeText(requireContext(), "Running paused!", Toast.LENGTH_SHORT).show()
 
-        // change status
+        // Change status
         activityStatus = ACTIVITY_PAUSED
 
         pauseTimer()
@@ -316,18 +373,21 @@ class MapFragment : Fragment() {
         requireActivity().stopService(serviceIntent)
     }
 
+    /**
+     * Stops the running activity and saves the run data.
+     */
     @OptIn(DelicateCoroutinesApi::class)
     private fun stopActivity() {
         Toast.makeText(requireContext(), "Running stopped!", Toast.LENGTH_SHORT).show()
 
-        // change status
+        // Change status
         activityStatus = ACTIVITY_STOPPED
 
-        // saving recorded run in database
+        // Save recorded run in database
         val weight = sharedPreferences.getString("Weight", "0")?.takeIf { it.isNotBlank() } ?: "0"
         val calories = weight.toFloat() * distance / 1000
         val dateTime = LocalDateTime.now()
-        val run = Run(0, dateTime, distance / 1000, time.toInt(), points,calories)
+        val run = Run(0, dateTime, distance / 1000, time.toInt(), points, calories)
         GlobalScope.launch {
             runViewModel.insertRun(run)
         }
@@ -339,20 +399,25 @@ class MapFragment : Fragment() {
     private fun stopTracker() {
         requireActivity().stopService(trackerIntent)
 
-        // clear live data variables
+        // Clear live data variables
         distance = 0f
+        calories = 0f
         distanceTextView.text = "0.000 km"
         paceTextView.text = "00:00 min/km"
+        caloriesTextView.text = "Calories: 0 kcal"
     }
 
     private fun resetTimer() {
         pauseTimer()
 
-        // clear time
+        // Clear time
         time = 0.0
         timeTextView.text = StringFormatter.getInstance().formatTime(time)
     }
 
+    /**
+     * Adds a photo at the current location.
+     */
     private fun addPhoto() {
         val intent = Intent(requireContext(), CameraActivity::class.java)
         val currentPinLocation = LocationHelper.getLastKnownLocation(myLocationOverlay)
@@ -362,21 +427,17 @@ class MapFragment : Fragment() {
         resultLauncher.launch(intent)
     }
 
-    var resultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val data = result.data
-            if (data != null) {
-                val path = data.getStringExtra("image_path")
-                val latitude = data.getDoubleExtra("latitude", 0.0)
-                val longitude = data.getDoubleExtra("longitude", 0.0)
-                val geoPoint = GeoPoint(latitude, longitude)
-                if (path != null) {
-                    addGeoPointToDataBase(geoPoint ,path)
-                    createPin()
-
-                }
-
+    var resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val data = result.data
+        if (data != null) {
+            val path = data.getStringExtra("image_path")
+            val latitude = data.getDoubleExtra("latitude", 0.0)
+            val longitude = data.getDoubleExtra("longitude", 0.0)
+            val geoPoint = GeoPoint(latitude, longitude)
+            if (path != null) {
+                addGeoPointToDataBase(geoPoint, path)
+                createPin()
             }
         }
-
+    }
 }

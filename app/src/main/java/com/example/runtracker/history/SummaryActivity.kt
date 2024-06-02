@@ -32,38 +32,39 @@ import org.osmdroid.views.overlay.OverlayItem
 import org.osmdroid.views.overlay.Polyline
 import java.io.File
 
+/**
+ * Activity for displaying a summary of a run, including details and a map.
+ */
 class SummaryActivity : AppCompatActivity() {
-    private var runID: Int = -1
+    private var runID: Int = -1 // ID of the run
 
+    // ViewModel for managing Run data
     private val viewModel: RunViewModel by viewModels {
         RunModelFactory((application as RunApplication).repository)
     }
 
-    private lateinit var textViewDistance: TextView
-    private lateinit var textViewTime: TextView
-    private lateinit var textViewPace: TextView
-    private lateinit var textCalories: TextView
-    // TODO: add 'photo markers' to map
-    private lateinit var mapView: MapView
-    // TODO: add gallery of photos from run
-
-    private lateinit var mapController: IMapController
+    private lateinit var textViewDistance: TextView // TextView for displaying run distance
+    private lateinit var textViewTime: TextView // TextView for displaying run duration
+    private lateinit var textViewPace: TextView // TextView for displaying run pace
+    private lateinit var textCalories: TextView // TextView for displaying calories burnt
+    private lateinit var mapView: MapView // MapView for displaying run route
+    private lateinit var mapController: IMapController // Map controller for MapView
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_summary)
 
+        // Initialize UI elements
         textViewDistance = findViewById(R.id.textViewDistance)
         textViewTime = findViewById(R.id.textViewTime)
         textViewPace = findViewById(R.id.textViewPace)
         mapView = findViewById(R.id.mapView)
         textCalories = findViewById(R.id.textCalories)
 
-        // map setup
+        // Map setup
         val context = applicationContext
-        Configuration.getInstance()
-            .load(context, PreferenceManager.getDefaultSharedPreferences(context))
+        Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context))
         Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
 
         mapView.setUseDataConnection(true)
@@ -73,45 +74,41 @@ class SummaryActivity : AppCompatActivity() {
         mapController = mapView.controller
         mapController.zoomTo(18, 1)
 
-        // read run data
-        if(intent != null) {
+        // Read run data
+        if (intent != null) {
             runID = intent.getIntExtra("runID", -1)
-            viewModel.runByID(runID).observe(this) {
-                if(it == null) {
-                    return@observe
-                }
+            viewModel.runByID(runID).observe(this) { run ->
+                if (run == null) return@observe
 
-                val timeSeconds = it.duration
-                val distanceKilometers = it.distance
+                // Calculate time, distance, pace, and calories
+                val timeSeconds = run.duration
+                val distanceKilometers = run.distance
+                val timeMinutes: Float = timeSeconds / 60f
+                val paceMinPerKm: Float = timeMinutes / distanceKilometers
+                val calories = String.format("%.2f", run.calories)
 
-                val timeMinutes: Float = timeSeconds / 60f // exact minutes
-                val paceMinPerKm: Float =
-                    timeMinutes / distanceKilometers // pace in minutes per kilometer
-
-                val points = it.points
-                val calories = String.format("%.2f",it.calories)
-
+                // Set text views
                 textViewDistance.text = StringFormatter.getInstance().formatDistance(distanceKilometers)
                 textViewTime.text = StringFormatter.getInstance().formatTime(timeSeconds)
                 textViewPace.text = StringFormatter.getInstance().formatPace(paceMinPerKm)
                 textCalories.text = "Calories burnt: $calories kcal"
 
-                // draw track
-                val pointsArrayList = ArrayList<GeoPoint>(points)
+                // Draw track on map
+                val pointsArrayList = ArrayList<GeoPoint>(run.points)
                 val polylineTrack = Polyline()
                 polylineTrack.setPoints(pointsArrayList)
                 mapView.overlays.add(polylineTrack)
                 mapView.invalidate()
 
-                // set map's starting location
-                val defaultLocation = points.get(0)
+                // Set map's starting location
+                val defaultLocation = run.points[0]
                 mapController.animateTo(defaultLocation)
             }
 
+            // Load pins and add them to the map
             val pins: ArrayList<OverlayItem> = ArrayList()
-
-            viewModel.getPins(runID).observe(this) {
-                for(pin in it) {
+            viewModel.getPins(runID).observe(this) { pinList ->
+                for (pin in pinList) {
                     val overlayItem = OverlayItem("Pin", "", pin.geoPoint)
                     pins.add(overlayItem)
                     val overlay = ItemizedIconOverlay(
@@ -139,11 +136,16 @@ class SummaryActivity : AppCompatActivity() {
             }
         }
 
+        // Set delete button click listener
         findViewById<Button>(R.id.buttonDeleteRun).setOnClickListener {
             buttonDeleteClicked(it)
         }
     }
 
+    /**
+     * Deletes the run and associated photos.
+     * @param view The view that was clicked.
+     */
     @OptIn(DelicateCoroutinesApi::class)
     fun buttonDeleteClicked(view: View) {
         GlobalScope.launch {
@@ -153,6 +155,10 @@ class SummaryActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Deletes photos associated with the run.
+     * @param runID The ID of the run.
+     */
     private fun deletePhotos(runID: Int) {
         val cw = ContextWrapper(this)
         val directory = cw.getDir("imageDir", Context.MODE_PRIVATE)

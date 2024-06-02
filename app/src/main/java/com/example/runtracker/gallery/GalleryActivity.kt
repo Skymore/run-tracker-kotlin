@@ -15,7 +15,11 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.runtracker.R
 
+/**
+ * Activity for displaying a gallery of images.
+ */
 class GalleryActivity : AppCompatActivity(), GalleryAdapter.OnImageClickListener {
+
     private lateinit var recyclerViewImages: RecyclerView
     private lateinit var sharedPreferencesSettings: SharedPreferences
     private var images = ArrayList<Images>()
@@ -23,17 +27,25 @@ class GalleryActivity : AppCompatActivity(), GalleryAdapter.OnImageClickListener
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gallery)
+
+        // Set the title of the gallery
         val title = findViewById<TextView>(R.id.text)
         title.text = "Gallery"
+
         recyclerViewImages = findViewById(R.id.recyclerViewImages)
         sharedPreferencesSettings = getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+        // Set the appearance of the app
         setAppAppearance()
+
+        // Load user photos into the gallery
         addUserPhoto()
+
+        // Set up the RecyclerView
         setView()
     }
 
     private fun setView() {
-        recyclerViewImages = findViewById(R.id.recyclerViewImages)
         recyclerViewImages.layoutManager = GridLayoutManager(applicationContext, 2)
         recyclerViewImages.adapter = GalleryAdapter(images, this)
     }
@@ -42,7 +54,6 @@ class GalleryActivity : AppCompatActivity(), GalleryAdapter.OnImageClickListener
         val header = findViewById<LinearLayout>(R.id.linearLayout)
         val background = findViewById<ConstraintLayout>(R.id.main)
         if (sharedPreferencesSettings.getBoolean("darkMode", false)) {
-
             header.setBackgroundColor(Color.BLACK)
             background.setBackgroundColor(Color.rgb(170, 170, 170))
         } else {
@@ -71,6 +82,7 @@ class GalleryActivity : AppCompatActivity(), GalleryAdapter.OnImageClickListener
     }
 
     override fun onImageClick(position: Int) {
+        // Handle image click event
         val intent = Intent(this, GalleryImageDetailsActivity::class.java)
         intent.putExtra("path", images[position].path)
         startActivity(intent)

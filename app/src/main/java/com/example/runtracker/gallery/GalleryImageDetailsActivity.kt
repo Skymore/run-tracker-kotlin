@@ -12,7 +12,11 @@ import com.example.runtracker.R
 import com.squareup.picasso.Picasso
 import java.io.File
 
-class GalleryImageDetailsActivity: AppCompatActivity() {
+/**
+ * Activity for displaying details of a selected image from the gallery.
+ */
+class GalleryImageDetailsActivity : AppCompatActivity() {
+
     private lateinit var imagePath: String
     private lateinit var imageView: ImageView
     private lateinit var sharedPreferencesSettings: SharedPreferences
@@ -20,10 +24,15 @@ class GalleryImageDetailsActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gallery_image_details)
+
         imageView = findViewById(R.id.imageView)
         sharedPreferencesSettings = getSharedPreferences("settings", Context.MODE_PRIVATE)
         imagePath = intent.getStringExtra("path").toString()
+
+        // Set the appearance of the app
         setAppAppearance()
+
+        // Load and display the photo
         uploadPhoto()
     }
 
@@ -32,11 +41,12 @@ class GalleryImageDetailsActivity: AppCompatActivity() {
         val directory = cw.getDir("imageDir", Context.MODE_PRIVATE)
         val subDirectories = directory.listFiles()
 
+        // Iterate through subdirectories to find the image file
         for (subDirectory in subDirectories!!) {
             if (subDirectory.isDirectory) {
                 val files = subDirectory.listFiles()
-                for(file in files!!){
-                    if(file.name ==imagePath){
+                for (file in files!!) {
+                    if (file.name == imagePath) {
                         val myImageFile = File(subDirectory, imagePath)
                         Picasso.get().load(myImageFile).into(imageView)
                         break
@@ -44,7 +54,6 @@ class GalleryImageDetailsActivity: AppCompatActivity() {
                 }
             }
         }
-
     }
 
     private fun setAppAppearance() {

@@ -6,11 +6,15 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.osmdroid.util.GeoPoint
 
+/**
+ * Converts between a list of GeoPoint objects and their string representation for Room database.
+ */
 class PointsListConverter {
+
     @TypeConverter
     fun mutableListToString(list: MutableList<GeoPoint>): String {
         val listOfSerializedPoints: ArrayList<String> = ArrayList()
-        for(point in list) {
+        for (point in list) {
             listOfSerializedPoints.add(geoPointToString(point))
         }
         return Json.encodeToString(listOfSerializedPoints)
@@ -20,7 +24,7 @@ class PointsListConverter {
     fun toMutableList(value: String): MutableList<GeoPoint> {
         val listOfSerializedPoints: List<String> = Json.decodeFromString(value)
         val list: MutableList<GeoPoint> = ArrayList()
-        for(serializedPoint in listOfSerializedPoints) {
+        for (serializedPoint in listOfSerializedPoints) {
             list.add(toGeoPoint(serializedPoint))
         }
         return list

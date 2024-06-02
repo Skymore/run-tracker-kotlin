@@ -9,7 +9,13 @@ import com.example.runtracker.R
 import com.squareup.picasso.Picasso
 import java.io.File
 
-class GalleryAdapter(private var images: ArrayList<Images>, private var onImageClickListener: OnImageClickListener): RecyclerView.Adapter<GalleryViewHolder>() {
+/**
+ * Adapter for displaying images in the gallery.
+ */
+class GalleryAdapter(
+    private var images: ArrayList<Images>,
+    private var onImageClickListener: OnImageClickListener
+) : RecyclerView.Adapter<GalleryViewHolder>() {
 
     var uploadedImages = ArrayList<String>()
 
@@ -27,9 +33,9 @@ class GalleryAdapter(private var images: ArrayList<Images>, private var onImageC
         val image = images[position]
         val cw = ContextWrapper(holder.itemView.context)
         val directory = cw.getDir("imageDir", Context.MODE_PRIVATE)
-
         val subDirectories = directory.listFiles()
 
+        // Iterate through subdirectories to find the image file
         for (subDirectory in subDirectories!!) {
             if (subDirectory.isDirectory) {
                 val files = subDirectory.listFiles()
@@ -46,7 +52,9 @@ class GalleryAdapter(private var images: ArrayList<Images>, private var onImageC
         }
     }
 
-
+    /**
+     * Interface for handling image click events.
+     */
     interface OnImageClickListener {
         fun onImageClick(position: Int)
     }

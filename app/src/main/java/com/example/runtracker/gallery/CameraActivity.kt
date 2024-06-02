@@ -34,31 +34,41 @@ import java.io.FileOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+/**
+ * Activity for capturing photos using CameraX.
+ */
 class CameraActivity : AppCompatActivity() {
+
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var savedFilePath: String
     private lateinit var captureButton: ImageButton
     private lateinit var cameraProvider: ListenableFuture<ProcessCameraProvider>
     private lateinit var previewView: PreviewView
     var latitude = 0.0
-    var longitude =0.0
+    var longitude = 0.0
     private var filename: String = ""
-    var runID : Int = 0
+    var runID: Int = 0
 
     @SuppressLint("MissingInflatedId", "SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_camera)
-        runID = intent.getIntExtra("runID",0)
+
+        // Initialize variables with intent data
+        runID = intent.getIntExtra("runID", 0)
         latitude = intent.getDoubleExtra("latitude", 0.0)
         longitude = intent.getDoubleExtra("longitude", 0.0)
         filename = (kotlin.math.abs(latitude) + kotlin.math.abs(longitude)).toString().replace(".", "")
         filename += "${System.currentTimeMillis()}"
         savedFilePath = "${getExternalFilesDir(null)?.absolutePath}/${filename}.jpg"
+
+        // Set up camera and UI elements
         cameraExecutor = Executors.newSingleThreadExecutor()
         captureButton = findViewById(R.id.imageButtonCapture)
         previewView = findViewById(R.id.camera)
         cameraProvider = ProcessCameraProvider.getInstance(this)
+
+        // Request camera permission
         requestPermission()
     }
 
@@ -86,11 +96,9 @@ class CameraActivity : AppCompatActivity() {
 
     private fun bindPreview(cameraProvider: ProcessCameraProvider) {
         val preview: Preview = Preview.Builder().build()
-
         val cameraSelector: CameraSelector = CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
             .build()
-
         preview.setSurfaceProvider(previewView.surfaceProvider)
         cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, preview)
     }
@@ -113,9 +121,9 @@ class CameraActivity : AppCompatActivity() {
                         saveImage(savedUri)
                         runOnUiThread {
                             val intent = Intent()
-                            intent.putExtra("latitude",latitude)
-                            intent.putExtra("longitude",longitude)
-                            intent.putExtra("image_path","${filename}.jpg")
+                            intent.putExtra("latitude", latitude)
+                            intent.putExtra("longitude", longitude)
+                            intent.putExtra("image_path", "${filename}.jpg")
                             setResult(Activity.RESULT_OK, intent)
                             finish()
                         }
@@ -157,7 +165,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun requestCameraPermissionIfMissing(onResult: ((Boolean) -> Unit)) {
+    private fun requestCameraPermissionIfMissing(onResult: (Boolean) -> Unit) {
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.CAMERA

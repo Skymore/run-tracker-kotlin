@@ -14,6 +14,9 @@ import androidx.core.app.ActivityCompat
 import org.osmdroid.util.GeoPoint
 import java.util.*
 
+/**
+ * Service for tracking the user's location during a run.
+ */
 class TrackerService : Service() {
     companion object {
         const val TRACKER_UPDATED = "trackerUpdated"
@@ -24,56 +27,64 @@ class TrackerService : Service() {
     }
 
     private val timer = Timer()
-
     private lateinit var currentLocation: GeoPoint
     private var latitude = 0.0
     private var longitude = 0.0
-
     private var distance: Float = 0f
     private var points: MutableList<GeoPoint> = mutableListOf()
 
     override fun onBind(p0: Intent?): IBinder? = null
 
+    /**
+     * Called when the service is started.
+     */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         latitude = intent!!.getDoubleExtra(LAT_EXTRA, 0.0)
-        longitude = intent!!.getDoubleExtra(LON_EXTRA, 0.0)
+        longitude = intent.getDoubleExtra(LON_EXTRA, 0.0)
         currentLocation = GeoPoint(latitude, longitude)
-
-        distance = intent!!.getFloatExtra(DIST_EXTRA, 0f)
-
+        distance = intent.getFloatExtra(DIST_EXTRA, 0f)
         startTracking()
-
         return START_NOT_STICKY
     }
 
+    /**
+     * Called when the service is destroyed.
+     */
     override fun onDestroy() {
         stopTracking()
         super.onDestroy()
     }
 
+    /**
+     * Starts tracking the user's location.
+     */
     private fun startTracking() {
-        // start recording location changes
         timer.scheduleAtFixedRate(DistanceTask(distance), 0, 1000)
     }
 
+    /**
+     * Stops tracking the user's location.
+     */
     private fun stopTracking() {
-        // stop recording location changes
         timer.cancel()
     }
 
+    /**
+     * TimerTask for updating the distance and location.
+     */
     private inner class DistanceTask(private var distance: Float) : TimerTask() {
         override fun run() {
-            // add way point
+            // Add way point
             val runDataPair: Pair<Float, MutableList<GeoPoint>> =
                 RunHelper.addWayPointToRun(points, distance, currentLocation)
             distance = runDataPair.first
             points = runDataPair.second
 
-            // get curr location
+            // Get current location
             val newLocation = getLocation()
             currentLocation = GeoPoint(newLocation.latitude, newLocation.longitude)
 
-            // send data to MapFragment
+            // Send data to MapFragment
             val intent = Intent(TRACKER_UPDATED)
             intent.putExtra(LAT_EXTRA, newLocation.latitude)
             intent.putExtra(LON_EXTRA, newLocation.longitude)
@@ -81,20 +92,20 @@ class TrackerService : Service() {
             sendBroadcast(intent)
         }
 
+        /**
+         * Gets the current location.
+         * @return The current location.
+         */
         fun getLocation(): Location {
-
             var lastKnownLocationNetwork: Location? = null
             var lastKnownLocationGPS: Location? = null
             val locationManagerGPS = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val locationManagerNetwork =
-                getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            val hasNetwork =
-                locationManagerNetwork.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+            val locationManagerNetwork = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val hasNetwork = locationManagerNetwork.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
             val hasGPS = locationManagerNetwork.isProviderEnabled(LocationManager.GPS_PROVIDER)
 
-            val networkLocationListener =
-                LocationListener { location -> lastKnownLocationNetwork = location }
-            val GPSLocationListener = LocationListener { location -> lastKnownLocationGPS = location }
+            val networkLocationListener = LocationListener { location -> lastKnownLocationNetwork = location }
+            val gpsLocationListener = LocationListener { location -> lastKnownLocationGPS = location }
 
             if (hasNetwork) {
                 if (ActivityCompat.checkSelfPermission(
@@ -130,26 +141,29 @@ class TrackerService : Service() {
                             LocationManager.GPS_PROVIDER,
                             0,
                             0f,
-                            GPSLocationListener
+                            gpsLocationListener
                         )
                     }
                 }
             }
 
-            lastKnownLocationNetwork =
-                locationManagerNetwork.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            lastKnownLocationGPS =
-                locationManagerNetwork.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            lastKnownLocationNetwork = locationManagerNetwork.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            lastKnownLocationGPS = locationManagerNetwork.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             var lastKnownLocation: Location? = null
-            lastKnownLocation =
-                when (isBetterLocation(lastKnownLocationGPS, lastKnownLocationNetwork)) {
-                    true -> lastKnownLocationGPS
-                    false -> lastKnownLocationNetwork
-                }
+            lastKnownLocation = when (isBetterLocation(lastKnownLocationGPS, lastKnownLocationNetwork)) {
+                true -> lastKnownLocationGPS
+                false -> lastKnownLocationNetwork
+            }
 
             return lastKnownLocation!!
         }
 
+        /**
+         * Determines if the new location is better than the current best location.
+         * @param location The new location.
+         * @param currBestLocation The current best location.
+         * @return True if the new location is better, false otherwise.
+         */
         fun isBetterLocation(location: Location?, currBestLocation: Location?): Boolean {
             if (currBestLocation == null) {
                 return true
@@ -159,29 +173,29 @@ class TrackerService : Service() {
                 return false
             }
 
-            // check whether the new location fix is newer or older
+            // Check whether the new location fix is newer or older
             val timeDelta: Long = location.time - currBestLocation.time
             val isSignificantlyNewer: Boolean = timeDelta > SIGNIFICANT_TIME_DIFFERENCE
             val isSignificantlyOlder: Boolean = timeDelta < -SIGNIFICANT_TIME_DIFFERENCE
 
             when {
-                // if it's been more than two minutes since the current location, use the new location because the user has likely moved
+                // If it's been more than two minutes since the current location, use the new location because the user has likely moved
                 isSignificantlyNewer -> return true
-                // if the new location is more than two minutes older, it must be worse
+                // If the new location is more than two minutes older, it must be worse
                 isSignificantlyOlder -> return false
             }
 
-            // check whether the new location fix is more or less accurate
+            // Check whether the new location fix is more or less accurate
             val isNewer: Boolean = timeDelta > 0L
             val accuracyDelta: Float = location.accuracy - currBestLocation.accuracy
             val isLessAccurate: Boolean = accuracyDelta > 0f
             val isMoreAccurate: Boolean = accuracyDelta < 0f
             val isSignificantlyLessAccurate: Boolean = accuracyDelta > 200f
 
-            // check if the old and new location are from the same provider
+            // Check if the old and new location are from the same provider
             val isFromSameProvider: Boolean = location.provider == currBestLocation.provider
 
-            // determine location quality using a combination of timeliness and accuracy
+            // Determine location quality using a combination of timeliness and accuracy
             return when {
                 isMoreAccurate -> true
                 isNewer && !isLessAccurate -> true

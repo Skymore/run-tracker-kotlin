@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- City Name -->
+    <TextView
+        android:id="@+id/city_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="City"
+        android:textSize="28sp"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center_horizontal"
+        android:padding="8dp"
+        android:textStyle="bold"/>
+
+    <!-- Current Temperature -->
+    <TextView
+        android:id="@+id/temp_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Temperature"
+        android:textSize="48sp"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center_horizontal"
+        android:padding="8dp"
+        android:textStyle="bold"/>
+
+    <!-- Weather Condition -->
+    <TextView
+        android:id="@+id/weather_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Weather Condition"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center_horizontal"
+        android:padding="8dp"
+        android:textStyle="italic"/>
+
+    <!-- Min and Max Temperature -->
+    <TextView
+        android:id="@+id/min_max_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Min Temp / Max Temp"
+        android:textSize="18sp"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center_horizontal"
+        android:padding="8dp"/>
+
+    <!-- Sunrise and Sunset Time -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp">
+
+        <!-- Sunrise Time -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/sunrise"/>
+
+            <TextView
+                android:id="@+id/sunrise_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sunrise"
+                android:textColor="@android:color/black"
+                android:paddingTop="8dp"/>
+        </LinearLayout>
+
+        <!-- Sunset Time -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/sunset"/>
+
+            <TextView
+                android:id="@+id/sunset_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sunset"
+                android:textColor="@android:color/black"
+                android:paddingTop="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Wind Speed, Pressure, Humidity -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp">
+
+        <!-- Wind Speed -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/wind"/>
+
+            <TextView
+                android:id="@+id/wind_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wind"
+                android:textColor="@android:color/black"
+                android:paddingTop="8dp"/>
+        </LinearLayout>
+
+        <!-- Pressure -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/pressure"/>
+
+            <TextView
+                android:id="@+id/pressure_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pressure"
+                android:textColor="@android:color/black"
+                android:paddingTop="8dp"/>
+        </LinearLayout>
+
+        <!-- Humidity -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/humidity"/>
+
+            <TextView
+                android:id="@+id/humidity_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Humidity"
+                android:textColor="@android:color/black"
+                android:paddingTop="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

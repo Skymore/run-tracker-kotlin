@@ -10,16 +10,23 @@ import com.example.runtracker.RunApplication
 import com.example.runtracker.database.RunModelFactory
 import com.example.runtracker.database.RunViewModel
 
+/**
+ * Activity for displaying run statistics.
+ */
 class StatisticsActivity : AppCompatActivity() {
     private val viewModel: RunViewModel by viewModels {
         RunModelFactory((application as RunApplication).repository)
     }
 
+    /**
+     * Called when the activity is starting.
+     */
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_statistics)
 
+        // Observe the total number of runs
         viewModel.numberOfRuns.observe(this) {
             if (it != null) {
                 findViewById<TextView>(R.id.textViewTotalRuns).text =
@@ -27,6 +34,7 @@ class StatisticsActivity : AppCompatActivity() {
             }
         }
 
+        // Observe the total distance run
         viewModel.totalDistance.observe(this) {
             if (it != null) {
                 findViewById<TextView>(R.id.textViewTotalDistance).text =
@@ -34,6 +42,7 @@ class StatisticsActivity : AppCompatActivity() {
             }
         }
 
+        // Observe the total duration of runs
         viewModel.totalDuration.observe(this) {
             if (it != null) {
                 findViewById<TextView>(R.id.textViewTotalDuration).text =
@@ -41,6 +50,7 @@ class StatisticsActivity : AppCompatActivity() {
             }
         }
 
+        // Observe the total number of photos taken
         viewModel.numberOfPins.observe(this) {
             if (it != null) {
                 findViewById<TextView>(R.id.textViewTotalPhotos).text =
@@ -48,6 +58,7 @@ class StatisticsActivity : AppCompatActivity() {
             }
         }
 
+        // Observe the longest distance run
         viewModel.longestDistance.observe(this) {
             if (it != null) {
                 findViewById<TextView>(R.id.textViewLongestDistance).text =
@@ -55,6 +66,7 @@ class StatisticsActivity : AppCompatActivity() {
             }
         }
 
+        // Observe the longest duration of a run
         viewModel.longestDuration.observe(this) {
             if (it != null) {
                 findViewById<TextView>(R.id.textViewLongestDuration).text =
@@ -62,28 +74,23 @@ class StatisticsActivity : AppCompatActivity() {
             }
         }
 
-
-        viewModel.totalBurnedCalories.observe(this){
-            if(it!=null){
-                val calories = String.format("%.1f",it)
-                findViewById<TextView>(R.id.textViewTotalCalories).text = "Total calories burnt: $calories kcal"
-            }
-        }
-
-
-        viewModel.maxBurnedCalories.observe(this){
-            if(it!=null){
-                val calories = String.format("%.1f",it)
-                findViewById<TextView>(R.id.textViewMaxCalories).text = "Most calories burnt: $calories kcal"
+        // Observe the total calories burned
+        viewModel.totalBurnedCalories.observe(this) {
+            if (it != null) {
+                val calories = String.format("%.1f", it)
                 findViewById<TextView>(R.id.textViewTotalCalories).text =
-                    "Total burned calories:\n$it kcal"
+                    "Total calories burnt: $calories kcal"
             }
         }
 
+        // Observe the maximum calories burned in a single run
         viewModel.maxBurnedCalories.observe(this) {
             if (it != null) {
+                val calories = String.format("%.1f", it)
                 findViewById<TextView>(R.id.textViewMaxCalories).text =
-                    "Most burned calories:\n$it kcal"
+                    "Most calories burnt: $calories kcal"
+                findViewById<TextView>(R.id.textViewTotalCalories).text =
+                    "Total burned calories:\n$it kcal"
             }
         }
     }
