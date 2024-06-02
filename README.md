@@ -45,30 +45,6 @@ The main menu provides navigation options for the different features of the app:
 - `HISTORY`: View the history of running activities.
 - `SETTINGS`: Adjust app settings.
 
-### Running Tracking
-
-Click `START ACTIVITY` to begin a new running session. The app will track the running time, distance, steps, and calories burned, and display the route on a map.
-
-### Weather Information
-
-Click `WEATHER` to view current weather conditions based on your location.
-
-### Photo Gallery
-
-Click `GALLERY` to view photos taken during your running sessions.
-
-### History Records
-
-Click `HISTORY` to view the history of your running activities, including the date, distance, and route of each run.
-
-### Account Information
-
-Click `MY ACCOUNT` to manage your personal account details such as name, gender, and date of birth.
-
-### Settings
-
-Click `SETTINGS` to access the settings menu, where you can customize the app's appearance, including theme color and night mode.
-
 
 ## License
 
